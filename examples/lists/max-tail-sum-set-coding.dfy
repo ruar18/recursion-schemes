@@ -98,38 +98,43 @@ module MaxTailSum {
   }
 
 
-  // x is of the form Conc(Conc(init, El(a)), rest)
+  // x is of the form ((init, a), rest)
   lemma MovedInCoding(l: List, x: ListC, a: int, y: ListC)
     requires AssociateLeft(x, a, y) in ComplexCoding(l)
     ensures AssociateRight(x, a, y) in ComplexCoding(l)
   {
-    assume AssociateRight(x, a, y) in ComplexCoding(l);
+    assume AssociateRight(x, a, y) in ComplexCoding(l) ;
   }
 
+  // Idea: write x = ((init, a), rest) and associate a to the right, 
+  // until you get to the "normal form" SimpleCoding(l)
   lemma EquivToNormal(l: List, x: ListC)
+    requires l != Nil
     requires x in ComplexCoding(l)
     decreases x.left
-    ensures G(Conc(NilC, SimpleCoding(l))) == G(x)
+    ensures G(SimpleCoding(l)) == G(x)
   {
     // assert exists w: ListC, z: ListC :: x == Conc(w, z);
     // var w :|
-    if x == Conc(NilC, SimpleCoding(l)) {}
+    if x == SimpleCoding(l) {}
     else {
-      match x {
-        case Conc(w, z) => {
-          assume w != NilC;
-          assume InitDecomposableC(w);
-          var (init, a) := (w.left, w.right.val);
-          var moved := Conc(init, Conc(El(a), z));
-          CanMove(init, a, z);
-          MovedInCoding(l, init, a, z);
-          EquivToNormal(l, moved);
+      assert x.Conc?;
+      assert x.left != NilC;
+      match x.left 
+      case El(a) => {
+        assume G(SimpleCoding(l)) == G(x);
+      }
+      // We know x.left is head-decomposable
+      case Conc(init, El(a)) => {
+        assume init != NilC;
+        MovedInCoding(l, init, a, x.right);
+        CanMove(init, a, x.right);
       }
     } 
-    }
   }
 
   lemma AllEquivalent(l: List, x: ListC, y: ListC)
+    requires l != Nil
     requires x in ComplexCoding(l) && y in ComplexCoding(l)
     ensures G(x) == G(y)
   {
@@ -137,7 +142,7 @@ module MaxTailSum {
   }
 
   lemma EquivalentSimple(l: List)
-    ensures MainF(l) == MainG(SimpleCoding(l)) // pass through the coding function
+    ensures MainF(l) == MainG(SimpleCoding(l)) 
   {
     match l 
     case Nil => {} 
@@ -147,11 +152,10 @@ module MaxTailSum {
   }
 
   // The ListC that preserves the recursive structure of l 
-  // (with an added NilC in front) is present in ComplexCoding(l)
-  // TODO: the NilC is a bit annoying, can we remove it? 
+  // is present in ComplexCoding(l)
   lemma NormalFormInCoding(l: List)
     requires l != Nil
-    ensures Conc(NilC, SimpleCoding(l)) in ComplexCoding(l)
+    ensures SimpleCoding(l) in ComplexCoding(l)
   {
   }
 
@@ -177,23 +181,31 @@ module MaxTailSum {
     case Cons(a, z) => {
       EquivalentSimple(l); // ComplexCoding is defined using SimpleCoding
       assert MainF(l) == Join(G(El(a)), G(SimpleCoding(z)));
-      assert Conc(NilC, SimpleCoding(l)) in ComplexCoding(l); // TODO: can we remove the NilC somehow?
-      AllEquivalent(l, Conc(NilC, SimpleCoding(l)), x);
+      assert SimpleCoding(l) in ComplexCoding(l); // TODO: can we remove the NilC somehow?
+      AllEquivalent(l, SimpleCoding(l), x);
     }
   }
 
-  // method Main() {
-  //   var l := Cons(5, Cons(-2, Cons(3, Cons(-2, Cons(3, Nil)))));
-  //   var assoc := ComplexCoding(l);
-  //   var ComplexCoding := assoc;
-  //   while ComplexCoding != {} 
-  //     decreases ComplexCoding;
-  //   {
-  //     var y :| y in ComplexCoding;
-  //     print PrintListC(y) + "\n";
-  //     ComplexCoding := ComplexCoding - { y };
-  //   }
-  // }
+  /**** Some experiments with the Rep function ****/
+  lemma RepInverse(l: List, x: ListC) 
+    requires x in ComplexCoding(l)
+    ensures Rep(x) == l
+  {
+  }
+
+  lemma FRepBehaviour(x: ListC) 
+    ensures MainG(x) == MainF(Rep(x))
+  {
+    assume MainG(x) == MainF(Rep(x));
+  }
+
+  lemma EquivalentSchemes2(l: List, x: ListC)
+    requires x in ComplexCoding(l)
+    ensures MainF(l) == MainG(x) 
+  {
+    RepInverse(l, x);
+    FRepBehaviour(x);
+  }
 }
 
 
