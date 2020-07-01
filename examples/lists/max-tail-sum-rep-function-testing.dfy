@@ -59,24 +59,19 @@ module MaxTailSum {
 
 
   /**** Some experiments with the Rep function ****/
-  lemma RepInverse(l: List, x: ListC) 
-    requires x in NewComplex(l)
-    ensures Rep(x) == l
+
+  lemma JoinAssoc(a: (int, int), b: (int, int), c: (int, int))
+    ensures Join(Join(a, b), c) == Join(a, Join(b, c))
   {
-    // match l 
-    // case Nil => {} 
-    // case Cons(head, tail) => {
 
-    // }
-    assume Rep(x) == l;
   }
-
-  
 
   lemma FHom(x: List, y: List) 
     ensures MainF(ListConc(x, y)) == Join(MainF(x), MainF(y))
   {
-    assume MainF(ListConc(x, y)) == Join(MainF(x), MainF(y));
+    match y 
+    case Nil => {} 
+    case Cons(head, tail) => {} // A good enough hint. 
   }
 
 
@@ -97,8 +92,11 @@ module MaxTailSum {
     requires x in NewComplex(l)
     ensures MainF(l) == MainG(x) 
   {
-    RepInverse(l, x);
-    FRepBehaviour(x);
+    if x == NilC {} 
+    else {
+      RepInverse(l, x);
+      FRepBehaviour(x);
+    }
   }
 }
 
