@@ -135,10 +135,12 @@ module Lists {
   function method NewAux(orig: List, x: ListC, y: List): set<ListC> 
     decreases y
     requires x.El? || x.Conc?
-    requires !x.Conc? ==> orig == Cons(x.val, y)
-    ensures forall t: ListC :: t in NewAux(orig, x, y) ==> t.Conc?
-    ensures !x.Conc? ==> Conc(x, SimpleCoding(y)) == SimpleCoding(orig)
-    ensures forall t: ListC :: (t in NewAux(orig, x, y) && !t.left.Conc?) ==> t == SimpleCoding(orig)
+    requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
+    // requires x.Conc? ==> InitDecomposableC(x) // Structure of x 
+    ensures forall t: ListC :: t in NewAux(orig, x, y) ==> t.Conc? // Results are always decomposable
+    // ensures !x.Conc? ==> Conc(x, SimpleCoding(y)) == SimpleCoding(orig) // Special case
+    ensures forall t: ListC :: (t in NewAux(orig, x, y) && !t.left.Conc?) ==> t == SimpleCoding(orig) // Special case of the results
+    // ensures forall t: ListC :: (t in NewAux(orig, x, y) && t.left.Conc?) ==> InitDecomposableC(t.left)
   {
     match y 
     case Nil => {} 
@@ -150,6 +152,7 @@ module Lists {
   function method NewComplex(l: List): set<ListC> 
     ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) ==> t.Conc?)
     ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && !t.left.Conc?) ==> t == SimpleCoding(l)
+    // ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && t.left.Conc?) ==> InitDecomposableC(t.left)
   {
     // NewAux(NilC, l) // maybe instead El(l.head), l.tail?
     if l == Nil then {NilC} else NewAux(l, El(l.head), l.tail)
@@ -162,9 +165,9 @@ module Lists {
     case NilC => Nil 
     case El(a) => Cons(a, Nil) 
     case Conc(a, b) => ListConc(Rep(a), Rep(b))
-    // if Rep(a) == Nil then Rep(b) else Rep(a).(tail := Rep(b)) // datatype update syntax 
   }
 
+  /**** Lemmas about converting between list types ****/
   // Rep is a left inverse of SimpleCoding 
   lemma SimpleRepInverse(l: List, x: ListC)
     requires x == SimpleCoding(l)
@@ -200,7 +203,8 @@ module Lists {
     }
     // Associate to the right 
     else {
-      assume InitDecomposableC(x.left);
+      // If need the fact that x is InitDecomposable to prove the below, 
+      // uncomment the relevant facts about NewAux and NewComplex
       assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
       RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
       AssocRepEquiv(x.left.left, x.left.right, x.right);
