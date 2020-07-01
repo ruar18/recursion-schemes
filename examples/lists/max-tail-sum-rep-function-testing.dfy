@@ -60,11 +60,11 @@ module MaxTailSum {
 
   /**** Some experiments with the Rep function ****/
 
-  lemma JoinAssoc(a: (int, int), b: (int, int), c: (int, int))
-    ensures Join(Join(a, b), c) == Join(a, Join(b, c))
-  {
+  // lemma JoinAssoc(a: (int, int), b: (int, int), c: (int, int))
+  //   ensures Join(Join(a, b), c) == Join(a, Join(b, c))
+  // {
 
-  }
+  // }
 
   lemma FHom(x: List, y: List) 
     ensures MainF(ListConc(x, y)) == Join(MainF(x), MainF(y))
