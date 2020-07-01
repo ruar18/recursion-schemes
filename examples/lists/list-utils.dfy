@@ -140,12 +140,8 @@ module Lists {
     ensures forall t: ListC :: t in NewAux(orig, x, y) ==> t.Conc? // Results are always decomposable
     // ensures !x.Conc? ==> Conc(x, SimpleCoding(y)) == SimpleCoding(orig) // Special case
     ensures forall t: ListC :: (t in NewAux(orig, x, y) && !t.left.Conc?) ==> t == SimpleCoding(orig) // Special case of the results
-    ensures forall t: ListC :: (t in NewAux(orig, x, y) && t.left.Conc?) ==> InitDecomposableC(t.left)
-    ensures Conc(x, SimpleCoding(y)) in NewAux(orig, x, y)
-    // ensures (x.Conc? && y != Nil) ==> Conc(x.left, Conc(x.right, SimpleCoding(y))) in NewAux(orig, x, y)
-    // ensures y != Nil ==> forall t: ListC :: (t in NewAux(orig, x, y) && t.left.Conc?) ==> Conc(t.left.left, Conc(t.left.right, t.right)) in NewAux(orig, Conc(x, El(y.head)), y.tail)
-    // ensures forall t: ListC :: (t in NewAux(orig, x, y) && t.left.Conc?) ==> 
-    //   Conc(t.left.left, Conc(t.left.right, t.right)) in NewAux(orig, t.left.left, Cons(t.left.right.val, y))
+    ensures forall t: ListC :: (t in NewAux(orig, x, y) && t.left.Conc?) ==> InitDecomposableC(t.left) // Structure of the left sublist
+    ensures Conc(x, SimpleCoding(y)) in NewAux(orig, x, y)  // Info about which lists are included 
   {
     match y 
     case Nil => {Conc(x, NilC)} 
@@ -197,30 +193,32 @@ module Lists {
   }
 
 
-  lemma RepInverse(l: List, x: ListC) 
-    decreases x.left
-    requires x in NewComplex(l) && x != NilC
-    ensures Rep(x) == l
-  {
-    // Base case
-    if !x.left.Conc? {
-      assert x == SimpleCoding(l);
-      SimpleRepInverse(l, x);
-    }
-    // Associate to the right 
-    else {
-      // x looks like ((init, El(a)), rest)
-      // If need the fact that x is InitDecomposable to prove the below, 
-      // uncomment the relevant facts about NewAux and NewComplex
-      assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
-      RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
-      AssocRepEquiv(x.left.left, x.left.right, x.right);
-    }
-  }
+  // lemma RepInverse(l: List, x: ListC) 
+  //   decreases x.left
+  //   requires x in NewComplex(l) && x != NilC
+  //   ensures Rep(x) == l
+  // {
+  //   // Base case
+  //   if !x.left.Conc? {
+  //     assert x == SimpleCoding(l);
+  //     SimpleRepInverse(l, x);
+  //   }
+  //   // Associate to the right 
+  //   else {
+  //     // x looks like ((init, El(a)), rest)
+  //     // If need the fact that x is InitDecomposable to prove the below, 
+  //     // uncomment the relevant facts about NewAux and NewComplex
+  //     assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
+  //     RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
+  //     AssocRepEquiv(x.left.left, x.left.right, x.right);
+  //   }
+  // }
 
   // Sanity check
   method Main() {
     var l := Cons(5, Cons(-2, Cons(3, Cons(-2, Cons(3, Nil)))));
+    // var l := Cons(5, Cons(2, Nil));
+    // var l := Nil;
     // var assoc := ComplexCoding(l);
     var assoc := NewComplex(l);
     var c := assoc;
