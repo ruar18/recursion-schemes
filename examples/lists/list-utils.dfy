@@ -158,14 +158,16 @@ module Lists {
     // if Rep(a) == Nil then Rep(b) else Rep(a).(tail := Rep(b)) // datatype update syntax 
   }
 
-  //
-
   // Rep is a left inverse of SimpleCoding 
   lemma SimpleRepInverse(l: List, x: ListC)
     requires x == SimpleCoding(l)
     ensures Rep(x) == l
   {
-    assume Rep(x) == l;
+    match l 
+    case Nil => {} 
+    case Cons(head, tail) => {
+      assert Rep(x) == ListConc(Rep(x.left), Rep(x.right));
+    }
   }
 
   lemma ListConcAssoc(x: List, y: List, z: List)
