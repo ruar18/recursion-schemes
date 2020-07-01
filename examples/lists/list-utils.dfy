@@ -132,20 +132,27 @@ module Lists {
   //   if l == Nil then {NilC} else Aux(l, l, NilC, l.head, SimpleCoding(l.tail))
   // }
 
-  function method NewAux(x: ListC, y: List): set<ListC> 
+  function method NewAux(orig: List, x: ListC, y: List): set<ListC> 
     decreases y
-    ensures forall t: ListC :: t in NewAux(x, y) ==> t.Conc?
+    requires x.El? || x.Conc?
+    requires !x.Conc? ==> orig == Cons(x.val, y)
+    ensures forall t: ListC :: t in NewAux(orig, x, y) ==> t.Conc?
+    ensures !x.Conc? ==> Conc(x, SimpleCoding(y)) == SimpleCoding(orig)
+    ensures forall t: ListC :: (t in NewAux(orig, x, y) && !t.left.Conc?) ==> t == SimpleCoding(orig)
   {
     match y 
     case Nil => {} 
-    case Cons(head, tail) => NewAux(Conc(x, El(head)), tail) + {Conc(x, SimpleCoding(y))}
+    case Cons(head, tail) => NewAux(orig, Conc(x, El(head)), tail) + {Conc(x, SimpleCoding(y))}
     // {Conc(Conc(x, El(head)), SimpleCoding(tail))}
     //{AssociateLeft(x, head, SimpleCoding(y))}
   }
 
   function method NewComplex(l: List): set<ListC> 
+    ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) ==> t.Conc?)
+    ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && !t.left.Conc?) ==> t == SimpleCoding(l)
   {
-    NewAux(NilC, l) // maybe instead El(l.head), l.tail?
+    // NewAux(NilC, l) // maybe instead El(l.head), l.tail?
+    if l == Nil then {NilC} else NewAux(l, El(l.head), l.tail)
   }
 
   /**** ListC -> List representation function ****/
@@ -173,19 +180,6 @@ module Lists {
   lemma ListConcAssoc(x: List, y: List, z: List)
     ensures ListConc(ListConc(x, y), z) == ListConc(x, ListConc(y, z))
   {
-    // match x 
-    // case Nil => {} 
-    // case Cons(x_head, x_tail) => {
-    //   match y 
-    //   case Nil => {}
-    //   case Cons(y_head, y_tail) => {
-    //     match z
-    //     case Nil => {
-    //       assert ListConc(ListConc(x, y), z) == ListConc(x, y);
-    //     } 
-    //     case Cons(z_head, z_tail) => {}
-    //   }
-    // }
   }
 
   lemma AssocRepEquiv(x: ListC, y: ListC, z: ListC)
@@ -196,14 +190,16 @@ module Lists {
 
   lemma RepInverse(l: List, x: ListC) 
     decreases x.left
-    requires x in NewComplex(l)
+    requires x in NewComplex(l) && x != NilC
     ensures Rep(x) == l
   {
-    if x == Conc(NilC, SimpleCoding(l)) {
-      SimpleRepInverse(l, SimpleCoding(l));
+    // Base case
+    if !x.left.Conc? {
+      assert x == SimpleCoding(l);
+      SimpleRepInverse(l, x);
     }
+    // Associate to the right 
     else {
-      assume x.left.Conc?;
       assume InitDecomposableC(x.left);
       assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
       RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
