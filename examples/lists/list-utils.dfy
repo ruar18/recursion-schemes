@@ -137,12 +137,19 @@ module Lists {
     requires x.El? || x.Conc?
     requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
     requires x.Conc? ==> InitDecomposableC(x) // Structure of x 
+    requires !x.Conc? ==> ListConc(Rep(NilC), Cons(x.val, y)) == orig
+    requires x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig 
     ensures forall t: ListC :: t in NewAux(orig, x, y) ==> t.Conc? // Results are always decomposable
     // ensures !x.Conc? ==> Conc(x, SimpleCoding(y)) == SimpleCoding(orig) // Special case
     ensures forall t: ListC :: (t in NewAux(orig, x, y) && !t.left.Conc?) ==> t == SimpleCoding(orig) // Special case of the results
     ensures forall t: ListC :: (t in NewAux(orig, x, y) && t.left.Conc?) ==> InitDecomposableC(t.left) // Structure of the left sublist
     ensures Conc(x, SimpleCoding(y)) in NewAux(orig, x, y)  // Info about which lists are included 
+    ensures ListConc(Rep(x), y) == orig 
+    ensures y == Nil ==> forall t: ListC :: t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig 
+    // ensures y != Nil ==> (NewAux(orig, x, y) - NewAux(orig, Conc(x, El(y.head)), y.tail)) == {Conc(x, SimpleCoding(y))} // maybe using a seq will be better? 
+    // ensures y != Nil ==> forall t: ListC :: t in (NewAux(orig, x, y) - NewAux(orig, Conc(x, El(y.head)), y.tail)) ==> ListConc(Rep(t.left), Rep(t.right)) == orig 
   {
+    RepAssociation(x, y);
     match y 
     case Nil => {Conc(x, NilC)} 
     case Cons(head, tail) => NewAux(orig, Conc(x, El(head)), tail) + {Conc(x, SimpleCoding(y))}
@@ -192,6 +199,12 @@ module Lists {
     ListConcAssoc(Rep(x), Rep(y), Rep(z));
   }
 
+  lemma RepAssociation(x: ListC, y: List)
+    requires x.Conc? ==> InitDecomposableC(x)
+    ensures x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == ListConc(Rep(x), y) 
+  {
+    assume x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == ListConc(Rep(x), y);
+  }
 
   // lemma RepInverse(l: List, x: ListC) 
   //   decreases x.left
@@ -211,6 +224,22 @@ module Lists {
   //     assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
   //     RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
   //     AssocRepEquiv(x.left.left, x.left.right, x.right);
+  //   }
+  // }
+
+  // lemma RepInverse(x: ListC, l: List)
+  //   requires x in NewComplex(l)
+  //   ensures Rep(x) == l
+  // {
+  //   match x 
+  //   case NilC => {}
+  //   case El(a) => {}
+  //   case Conc(a, b) => {
+  //     assert Rep(x) == ListConc(Rep(a), Rep(b));
+  //     assume a in NewComplex(Rep(a));
+  //     assume b in NewComplex(Rep(b));
+  //     // wts ListConc(Rep(a), Rep(b)) == l 
+  //     RepInverse(a, Rep(a)); RepInverse(b, Rep(b));
   //   }
   // }
 
