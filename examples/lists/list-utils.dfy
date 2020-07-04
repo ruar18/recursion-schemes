@@ -172,8 +172,11 @@ module Lists {
     ensures forall t: ListC :: (t in NewAux(orig, x, y, past) && t.left.Conc?) ==> InitDecomposableC(t.left) // Structure of the left sublist
     // ensures y == Nil ==> (forall t: ListC :: (t in NewAux(orig, x, y, past) && t.left.Conc?) ==> Conc(t.left.left, Conc(t.left.right, t.right)) in past) // now if I could just show that every element in NewComplex comes from this recursive call... 
     ensures y == Nil ==> (forall t: ListC :: (t in NewAux(orig, x, y, past) && t.left.Conc?) ==> Conc(t.left.left, Conc(t.left.right, t.right)) in NewAux(orig, x, y, past))
+    ensures ListConc(Rep(x), Rep(SimpleCoding(y))) == orig 
+    ensures forall t: ListC :: (t in NewAux(orig, x, y, past) ==> ListConc(Rep(t.left), Rep(t.right)) == orig)
 
   {
+    assume ListConc(Rep(x), Rep(SimpleCoding(y))) == orig ;
     // assert SimpleCoding(Nil) == NilC;
     // assert (y == Nil && x.Conc?) ==> Conc(x.left, Conc(x.right, SimpleCoding(Nil))) in past; // what if x is not decomposable??
     match y 
@@ -188,6 +191,7 @@ module Lists {
   function method NewComplex(l: List): set<ListC> 
     ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) ==> t.Conc?)
     ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && !t.left.Conc?) ==> t == SimpleCoding(l)
+    ensures forall t: ListC :: (t in NewComplex(l) && t.Conc?) ==> ListConc(Rep(t.left), Rep(t.right)) == l
     // ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && t.left.Conc?) ==> InitDecomposableC(t.left)
   {
     // NewAux(NilC, l) // maybe instead El(l.head), l.tail?
@@ -227,37 +231,53 @@ module Lists {
     ListConcAssoc(Rep(x), Rep(y), Rep(z));
   }
 
-  lemma AssocCoding(l: List, x: ListC)
-    requires x in NewComplex(l) && x != NilC
-    requires x.left.Conc?
-    ensures Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l)
-  {
-    // assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
-    match l 
-    case Nil => {} 
-    case Cons(hd, tl) => {
-      AssocCoding(tl, SimpleCoding(tl));
-    }
-  }
+  // lemma AssocCoding(l: List, x: ListC)
+  //   requires x in NewComplex(l) && x != NilC
+  //   requires x.left.Conc?
+  //   ensures Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l)
+  // {
+  //   // assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
+  //   match l 
+  //   case Nil => {} 
+  //   case Cons(hd, tl) => {
+  //     AssocCoding(tl, SimpleCoding(tl));
+  //   }
+  // }
 
-  lemma RepInverse(l: List, x: ListC) 
-    decreases x.left
-    requires x in NewComplex(l) && x != NilC
+  // lemma RepInverse(l: List, x: ListC) 
+  //   decreases x.left
+  //   requires x in NewComplex(l) && x != NilC
+  //   ensures Rep(x) == l
+  // {
+  //   // Base case
+  //   if !x.left.Conc? {
+  //     assert x == SimpleCoding(l);
+  //     SimpleRepInverse(l, x);
+  //   }
+  //   // Associate to the right 
+  //   else {
+  //     // x looks like ((init, El(a)), rest)
+  //     // If need the fact that x is InitDecomposable to prove the below, 
+  //     // uncomment the relevant facts about NewAux and NewComplex
+  //     AssocCoding(l, x);
+  //     RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
+  //     AssocRepEquiv(x.left.left, x.left.right, x.right);
+  //   }
+  // }
+
+  // Trying induction 
+  lemma RepInverse(x: ListC, l: List)
+    requires x in NewComplex(l)
     ensures Rep(x) == l
   {
-    // Base case
-    if !x.left.Conc? {
-      assert x == SimpleCoding(l);
-      SimpleRepInverse(l, x);
-    }
-    // Associate to the right 
-    else {
-      // x looks like ((init, El(a)), rest)
-      // If need the fact that x is InitDecomposable to prove the below, 
-      // uncomment the relevant facts about NewAux and NewComplex
-      AssocCoding(l, x);
-      RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
-      AssocRepEquiv(x.left.left, x.left.right, x.right);
+    match x 
+    case NilC => {}
+    case El(a) => {}
+    case Conc(a, b) => {
+      assert Rep(x) == ListConc(Rep(a), Rep(b));
+      assume a in NewComplex(Rep(a));
+      assume b in NewComplex(Rep(b));
+      RepInverse(a, Rep(a)); RepInverse(b, Rep(b));
     }
   }
 
