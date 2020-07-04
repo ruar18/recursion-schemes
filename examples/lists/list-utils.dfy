@@ -129,6 +129,24 @@ module Lists {
     (x.Conc? ==> Conc(x.left, Conc(x.right, SimpleCoding(y))) in past)
   }
 
+  function method Aux(orig: List, x: ListC, y: List): set<ListC> 
+    decreases y
+    requires x.El? || x.Conc?
+    requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
+    requires x.Conc? ==> InitDecomposableC(x) // Structure of x 
+    ensures forall t: ListC :: t in Aux(orig, x, y) ==> t.Conc? // Results are always decomposable
+    // ensures !x.Conc? ==> Conc(x, SimpleCoding(y)) == SimpleCoding(orig) // Special case
+    ensures forall t: ListC :: (t in Aux(orig, x, y) && !t.left.Conc?) ==> t == SimpleCoding(orig) // Special case of the results
+    ensures forall t: ListC :: (t in Aux(orig, x, y) && t.left.Conc?) ==> InitDecomposableC(t.left) // Structure of the left sublist
+    ensures Conc(x, SimpleCoding(y)) in Aux(orig, x, y)  // Info about which lists are included 
+  {
+    match y 
+    case Nil => {Conc(x, NilC)} 
+    case Cons(head, tail) => Aux(orig, Conc(x, El(head)), tail) + {Conc(x, SimpleCoding(y))}
+    // {Conc(Conc(x, El(head)), SimpleCoding(tail))}
+    //{AssociateLeft(x, head, SimpleCoding(y))}
+  }
+
   // Here we'll try a bit of a different approach. 
   // past stores all the lists already generated. The left sublists of all 
   // of the lists in past are sublists of the current x. 
@@ -152,7 +170,8 @@ module Lists {
     // ensures !x.Conc? ==> Conc(x, SimpleCoding(y)) == SimpleCoding(orig) // Special case
     ensures forall t: ListC :: (t in NewAux(orig, x, y, past) && !t.left.Conc?) ==> t == SimpleCoding(orig) // Special case of the results
     ensures forall t: ListC :: (t in NewAux(orig, x, y, past) && t.left.Conc?) ==> InitDecomposableC(t.left) // Structure of the left sublist
-    ensures y == Nil ==> (forall t: ListC :: (t in NewAux(orig, x, y, past) && t.left.Conc?) ==> Conc(t.left.left, Conc(t.left.right, t.right)) in past) // now if I could just show that every element in NewComplex comes from this recursive call... 
+    // ensures y == Nil ==> (forall t: ListC :: (t in NewAux(orig, x, y, past) && t.left.Conc?) ==> Conc(t.left.left, Conc(t.left.right, t.right)) in past) // now if I could just show that every element in NewComplex comes from this recursive call... 
+    ensures y == Nil ==> (forall t: ListC :: (t in NewAux(orig, x, y, past) && t.left.Conc?) ==> Conc(t.left.left, Conc(t.left.right, t.right)) in NewAux(orig, x, y, past))
 
   {
     // assert SimpleCoding(Nil) == NilC;
@@ -163,6 +182,8 @@ module Lists {
     // {Conc(Conc(x, El(head)), SimpleCoding(tail))}
     //{AssociateLeft(x, head, SimpleCoding(y))}
   }
+
+
 
   function method NewComplex(l: List): set<ListC> 
     ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) ==> t.Conc?)
@@ -206,6 +227,18 @@ module Lists {
     ListConcAssoc(Rep(x), Rep(y), Rep(z));
   }
 
+  lemma AssocCoding(l: List, x: ListC)
+    requires x in NewComplex(l) && x != NilC
+    requires x.left.Conc?
+    ensures Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l)
+  {
+    // assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
+    match l 
+    case Nil => {} 
+    case Cons(hd, tl) => {
+      AssocCoding(tl, SimpleCoding(tl));
+    }
+  }
 
   lemma RepInverse(l: List, x: ListC) 
     decreases x.left
@@ -222,7 +255,7 @@ module Lists {
       // x looks like ((init, El(a)), rest)
       // If need the fact that x is InitDecomposable to prove the below, 
       // uncomment the relevant facts about NewAux and NewComplex
-      assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
+      AssocCoding(l, x);
       RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
       AssocRepEquiv(x.left.left, x.left.right, x.right);
     }

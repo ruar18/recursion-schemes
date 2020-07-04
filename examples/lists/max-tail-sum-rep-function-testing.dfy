@@ -92,6 +92,8 @@ module MaxTailSum {
     requires x in NewComplex(l)
     ensures MainF(l) == MainG(x) 
   {
+    // Need a separate case just because of how RepInverse is defined, 
+    // can change this later 
     if x == NilC {} 
     else {
       RepInverse(l, x);
