@@ -2,9 +2,9 @@
 Some useful list-related definitions, including: 
   - Datatype definitions 
   - Common functions on lists
-  - Definitions for decomposing cons-lists and concatenation lists.
   - Coding functions between list types 
   - Representation function
+  - Lemmas about the coding and representation functions
 */
 
 module Lists {
@@ -37,6 +37,14 @@ module Lists {
     case Conc(x, y) => "(" + PrintListC(x) + ", " + PrintListC(y) + ")" 
   }
 
+  function method PrintList(l: List): string 
+  {
+    match l 
+    case Nil => "?"
+    case Cons(hd, tl) => "(., " + PrintList(tl) + ")"
+  }
+
+
   function method ListConc(a: List, b: List): List 
   {
     match a 
@@ -51,7 +59,6 @@ module Lists {
   }
 
   function method AssociateRight(x: ListC, a: int, y: ListC): ListC 
-    // ensures Rep(AssociateRight(x, a, y)) == 
   {
     if x == NilC then Conc(El(a), y) else Conc(x, Conc(El(a), y))
   }
@@ -67,22 +74,10 @@ module Lists {
   }
 
   /**** Decomposing concatenation lists */
-  predicate DecomposableC(x: ListC)
-  {
-    exists w: ListC, z: ListC :: x == Conc(w, z)
-  }
-
   predicate InitDecomposableC(x: ListC) 
     requires x.Conc?
   {
     x.right.El?
-  }
-
-  predicate HeadDecomposableC(x: ListC) 
-    requires x.Conc?
-  {
-    // exists a: int, tail: ListC :: x == Conc(El(a), tail)
-    x.left.El? 
   }
 
   /**** List -> ListC coding functions  ****/
@@ -103,71 +98,38 @@ module Lists {
     case Cons(a, x) => Conc(El(a), SimpleCoding(x))
   }
 
-  // function method Aux(orig: List, right: List, x: ListC, a: int, y: ListC): set<ListC> 
-  //   decreases y 
-  //   requires SimpleCoding(right) == Conc(El(a), y) 
-  //   requires Rep(AssociateRight(x, a, y)) == orig
-  //   requires y != NilC ==> y.Conc? 
-  //   requires y != NilC ==> y.left.El? // specifies the structure of y
-  //   requires x.Conc? ==> InitDecomposableC(x)
-  //   requires x == NilC ==> Conc(El(a), y) == SimpleCoding(orig)
-  //   ensures forall t: ListC :: (t in Aux(orig, right, x, a, y)) ==> t.Conc?
-  //   ensures forall t: ListC :: (t in Aux(orig, right, x, a, y)) ==> (t.left.Conc? ==> InitDecomposableC(t.left))
-  //   ensures forall t: ListC :: (t in Aux(orig, right, x, a, y)) ==> t.left != NilC
-  //   ensures AssociateLeft(x, a, y) in Aux(orig, right, x, a, y) ==> AssociateRight(x, a, y) in Aux(orig, right, x, a, y)
-  //   ensures Rep(AssociateRight(x, a, y)) == orig
-  // {
-  //   RepInvariant(x, a, y);
-  //   // assume Rep(AssociateRight(x, a, y)) == orig;
-  //   if y == NilC then {AssociateRight(x, a, y)}
-  //                else Aux(orig, right.tail, if x == NilC then El(a) else Conc(x, El(a)), y.left.val, y.right) + {AssociateRight(x, a, y)}
-  // }
 
-  // function method ComplexCoding(l: List): set<ListC>
-  //   ensures l != Nil ==> forall t: ListC :: t in ComplexCoding(l) ==> t.Conc?
-  //   ensures l != Nil ==> forall t: ListC :: (t in ComplexCoding(l) && t.Conc? && t.left.Conc?) ==> InitDecomposableC(t.left)
-  //   // ensures forall x: ListC, a: int, y: ListC :: AssociateLeft(x, a, y) in ComplexCoding(l) ==> AssociateRight(x, a, y) in ComplexCoding(l)
-  // {
-  //   assume l.Cons? ==> Rep(AssociateRight(NilC, l.head, SimpleCoding(l.tail))) == l;
-  //   if l == Nil then {NilC} else Aux(l, l, NilC, l.head, SimpleCoding(l.tail))
-  // }
-
-  function method NewAux(orig: List, x: ListC, y: List): set<ListC> 
+  function method Aux(orig: List, x: ListC, y: List): set<ListC> 
     decreases y
     requires x.El? || x.Conc?
     requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
-    requires x.Conc? ==> InitDecomposableC(x) // Structure of x 
+    requires SnocStructure(x) // Structure of x 
     requires !x.Conc? ==> ListConc(Rep(NilC), Cons(x.val, y)) == orig
     requires x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig 
-    ensures forall t: ListC :: t in NewAux(orig, x, y) ==> t.Conc? // Results are always decomposable
-    // ensures !x.Conc? ==> Conc(x, SimpleCoding(y)) == SimpleCoding(orig) // Special case
-    ensures forall t: ListC :: (t in NewAux(orig, x, y) && !t.left.Conc?) ==> t == SimpleCoding(orig) // Special case of the results
-    ensures forall t: ListC :: (t in NewAux(orig, x, y) && t.left.Conc?) ==> InitDecomposableC(t.left) // Structure of the left sublist
-    ensures Conc(x, SimpleCoding(y)) in NewAux(orig, x, y)  // Info about which lists are included 
+    ensures forall t: ListC :: t in Aux(orig, x, y) ==> t.Conc? // Results are always decomposable
+    ensures forall t: ListC :: (t in Aux(orig, x, y) && !t.left.Conc?) ==> t == SimpleCoding(orig) // Special case of the results
+    ensures forall t: ListC :: (t in Aux(orig, x, y) && t.left.Conc?) ==> InitDecomposableC(t.left) // Structure of the left sublist
+    ensures Conc(x, SimpleCoding(y)) in Aux(orig, x, y)  // Info about which lists are included 
     ensures ListConc(Rep(x), y) == orig 
-    ensures y == Nil ==> forall t: ListC :: t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig 
-    // ensures y != Nil ==> (NewAux(orig, x, y) - NewAux(orig, Conc(x, El(y.head)), y.tail)) == {Conc(x, SimpleCoding(y))} // maybe using a seq will be better? 
-    // ensures y != Nil ==> forall t: ListC :: t in (NewAux(orig, x, y) - NewAux(orig, Conc(x, El(y.head)), y.tail)) ==> ListConc(Rep(t.left), Rep(t.right)) == orig 
+    ensures y == Nil ==> (forall t: ListC :: t in Aux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig) 
   {
+    // Needed for the postcondition that ListConc(Rep(x), y) == orig 
     RepAssociation(x, y);
     match y 
-    case Nil => {Conc(x, NilC)} 
-    case Cons(head, tail) => NewAux(orig, Conc(x, El(head)), tail) + {Conc(x, SimpleCoding(y))}
-    // {Conc(Conc(x, El(head)), SimpleCoding(tail))}
-    //{AssociateLeft(x, head, SimpleCoding(y))}
+    case Nil => {Conc(x, NilC)}
+    case Cons(head, tail) => Aux(orig, Conc(x, El(head)), tail) + {Conc(x, SimpleCoding(y))}
   }
 
-  function method NewComplex(l: List): set<ListC> 
-    ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) ==> t.Conc?)
-    ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && !t.left.Conc?) ==> t == SimpleCoding(l)
-    // ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && t.left.Conc?) ==> InitDecomposableC(t.left)
+  function method Coding(l: List): set<ListC> 
+    ensures l != Nil ==> forall t: ListC :: (t in Coding(l) ==> t.Conc?)
+    ensures l != Nil ==> forall t: ListC :: (t in Coding(l) && !t.left.Conc?) ==> t == SimpleCoding(l)
   {
-    // NewAux(NilC, l) // maybe instead El(l.head), l.tail?
-    if l == Nil then {NilC} else NewAux(l, El(l.head), l.tail)
+    if l == Nil then {NilC} else Aux(l, El(l.head), l.tail)
   }
 
   /**** ListC -> List representation function ****/
   function method Rep(x: ListC): List 
+    ensures (x.Conc? && SnocStructure(x)) ==> Rep(x).Cons?
   {
     match x
     case NilC => Nil 
@@ -188,76 +150,79 @@ module Lists {
     }
   }
 
+  // Cons-list concatenation is associative
   lemma ListConcAssoc(x: List, y: List, z: List)
     ensures ListConc(ListConc(x, y), z) == ListConc(x, ListConc(y, z))
   {
   }
 
-  lemma AssocRepEquiv(x: ListC, y: ListC, z: ListC)
-    ensures Rep(Conc(Conc(x, y), z)) == Rep(Conc(x, Conc(y, z)))
+  // The concatenation of x and y in the definition of Aux is orig.
+  // Separating out the induction proof from the definition of Aux.
+  lemma AuxConcProperty(orig: List, x: ListC, y: List) 
+    decreases y
+    requires x.El? || x.Conc?
+    requires !x.Conc? ==> orig == Cons(x.val, y) 
+    requires SnocStructure(x) // Structure of x 
+    requires !x.Conc? ==> ListConc(Rep(NilC), Cons(x.val, y)) == orig
+    requires x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig 
+    ensures forall t: ListC :: (t in Aux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig)
   {
-    ListConcAssoc(Rep(x), Rep(y), Rep(z));
-  }
-
-  lemma RepAssociation(x: ListC, y: List)
-    requires x.Conc? ==> InitDecomposableC(x)
-    ensures x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == ListConc(Rep(x), y) 
-  {
-    assume x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == ListConc(Rep(x), y);
-  }
-
-  // lemma RepInverse(l: List, x: ListC) 
-  //   decreases x.left
-  //   requires x in NewComplex(l) && x != NilC
-  //   ensures Rep(x) == l
-  // {
-  //   // Base case
-  //   if !x.left.Conc? {
-  //     assert x == SimpleCoding(l);
-  //     SimpleRepInverse(l, x);
-  //   }
-  //   // Associate to the right 
-  //   else {
-  //     // x looks like ((init, El(a)), rest)
-  //     // If need the fact that x is InitDecomposable to prove the below, 
-  //     // uncomment the relevant facts about NewAux and NewComplex
-  //     assume Conc(x.left.left, Conc(x.left.right, x.right)) in NewComplex(l);
-  //     RepInverse(l, Conc(x.left.left, Conc(x.left.right, x.right)));
-  //     AssocRepEquiv(x.left.left, x.left.right, x.right);
-  //   }
-  // }
-
-  // lemma RepInverse(x: ListC, l: List)
-  //   requires x in NewComplex(l)
-  //   ensures Rep(x) == l
-  // {
-  //   match x 
-  //   case NilC => {}
-  //   case El(a) => {}
-  //   case Conc(a, b) => {
-  //     assert Rep(x) == ListConc(Rep(a), Rep(b));
-  //     assume a in NewComplex(Rep(a));
-  //     assume b in NewComplex(Rep(b));
-  //     // wts ListConc(Rep(a), Rep(b)) == l 
-  //     RepInverse(a, Rep(a)); RepInverse(b, Rep(b));
-  //   }
-  // }
-
-  // Sanity check
-  method Main() {
-    var l := Cons(5, Cons(-2, Cons(3, Cons(-2, Cons(3, Nil)))));
-    // var l := Cons(5, Cons(2, Nil));
-    // var l := Nil;
-    // var assoc := ComplexCoding(l);
-    var assoc := NewComplex(l);
-    var c := assoc;
-    while c != {} 
-      decreases c;
-    {
-      var y :| y in c;
-      print PrintListC(y) + "\n";
-      c := c - { y };
+    match y 
+    case Nil => {} 
+    case Cons(hd, tl) => {
+      // This is needed to ensure the recursive call meets 
+      // the 5th precondition of AuxConcProperty
+      RepAssociation(x, y);
+      AuxConcProperty(orig, Conc(x, El(hd)), tl);
+      var t := Conc(x, SimpleCoding(y));
+      SimpleRepInverse(y, SimpleCoding(y));
+      assert ListConc(Rep(t.left), Rep(t.right)) == orig;
     }
   }
 
+  // Specifies the structure of x in Aux
+  predicate SnocStructure(x: ListC) 
+  {
+    (x.Conc? || x.El?) && 
+    (x.Conc? ==> (InitDecomposableC(x) && SnocStructure(x.left)))
+  }
+
+  // Concatenation of a singleton in front is like Cons
+  lemma ConcSingleton(a: int, y: List) 
+    ensures Cons(a, y) == ListConc(Cons(a, Nil), y)
+  {
+
+  }
+
+  // Associating an element differently between two lists
+  // being concatenated does not affect the concatenation
+  lemma RepAssociation(x: ListC, y: List)
+    decreases x 
+    requires SnocStructure(x)
+    ensures x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == ListConc(Rep(x), y) 
+  {
+    match x 
+    case NilC => {} 
+    case El(a) => {}
+    case Conc(a, b) => {
+      assert ListConc(Rep(x.left), Cons(x.right.val, Nil)) == Rep(x);
+      ConcSingleton(x.right.val, y);
+      ListConcAssoc(Rep(x.left), Cons(x.right.val, Nil), y);
+    }
+  }
+
+  // Rep is a left inverse to Coding
+  lemma RepInverse(x: ListC, l: List)
+    requires x in Coding(l)
+    ensures Rep(x) == l
+  {
+    match x 
+    case NilC => {}
+    case El(a) => {}
+    case Conc(a, b) => {
+      assert Rep(x) == ListConc(Rep(a), Rep(b));
+      // This is really a statement about Coding
+      AuxConcProperty(l, El(l.head), l.tail); 
+    }
+  }
 }

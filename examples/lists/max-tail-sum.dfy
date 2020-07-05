@@ -1,8 +1,6 @@
 /*
 Here we try the maximum tail sum example of recsynt Section A.1.3.
 We use a coding function that changes up the recursive structure of the list. 
-We try to explicitly produce a set of lists with the coding function.
-WARNING: messy and does not verify. 
 */
 
 include "./list-utils.dfy"
@@ -36,7 +34,6 @@ module MaxTailSum {
 
   // Homomorphism. 
   function method G(l: ListC): (int, int) 
-    ensures G(l).1 >= G(l).0
   {
     match l 
     case NilC => (0, 0)
@@ -45,26 +42,18 @@ module MaxTailSum {
   }
 
   function method Join(res1: (int, int), res2: (int, int)): (int, int)
-    // ensures Join(res1, res2).1 == res1.1
   {
     var (s1, m1), (s2, m2) := res1, res2;
     (s1 + s2, Max(s2 + m1, m2))
   }
 
   function method MainG(l: ListC): (int, int)
-    ensures MainG(l).1 >= MainG(l).0
   {
     G(l)
   }
 
 
   /**** Some experiments with the Rep function ****/
-
-  // lemma JoinAssoc(a: (int, int), b: (int, int), c: (int, int))
-  //   ensures Join(Join(a, b), c) == Join(a, Join(b, c))
-  // {
-
-  // }
 
   lemma FHom(x: List, y: List) 
     ensures MainF(ListConc(x, y)) == Join(MainF(x), MainF(y))
@@ -89,15 +78,25 @@ module MaxTailSum {
   }
 
   lemma EquivalentSchemes(l: List, x: ListC)
-    requires x in NewComplex(l)
+    requires x in Coding(l)
     ensures MainF(l) == MainG(x) 
   {
     if x == NilC {} 
     else {
-      RepInverse(l, x);
+      RepInverse(x, l);
       FRepBehaviour(x);
     }
   }
+
+  // Sanity check
+  // method Main() {
+  //   var l := Cons(-4, Cons(5, Cons(5, Cons(3, Nil))));
+  //   // var x := SimpleCoding(l);
+  //   var x := Coding(l)[2];
+  //   print MainF(l);
+  //   print "\n";
+  //   print MainG(x);
+  // }
 }
 
 
