@@ -37,6 +37,14 @@ module Lists {
     case Conc(x, y) => "(" + PrintListC(x) + ", " + PrintListC(y) + ")" 
   }
 
+  function method PrintList(l: List): string 
+  {
+    match l 
+    case Nil => "?"
+    case Cons(hd, tl) => "(., " + PrintList(tl) + ")"
+  }
+
+
   function method ListConc(a: List, b: List): List 
   {
     match a 
@@ -108,7 +116,7 @@ module Lists {
     decreases y
     requires x.El? || x.Conc?
     requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
-    requires AllInitDecomposable(x) // Structure of x 
+    requires SnocStructure(x) // Structure of x 
     requires !x.Conc? ==> ListConc(Rep(NilC), Cons(x.val, y)) == orig
     requires x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig 
     ensures forall t: ListC :: t in NewAux(orig, x, y) ==> t.Conc? // Results are always decomposable
@@ -117,7 +125,7 @@ module Lists {
     ensures forall t: ListC :: (t in NewAux(orig, x, y) && t.left.Conc?) ==> InitDecomposableC(t.left) // Structure of the left sublist
     ensures Conc(x, SimpleCoding(y)) in NewAux(orig, x, y)  // Info about which lists are included 
     ensures ListConc(Rep(x), y) == orig 
-    ensures y == Nil ==> forall t: ListC :: t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig 
+    ensures y == Nil ==> (forall t: ListC :: t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig) 
     // ensures y != Nil ==> (NewAux(orig, x, y) - NewAux(orig, Conc(x, El(y.head)), y.tail)) == {Conc(x, SimpleCoding(y))} // maybe using a seq will be better? 
     // ensures y != Nil ==> forall t: ListC :: (t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig)
   {
@@ -142,7 +150,7 @@ module Lists {
 
   /**** ListC -> List representation function ****/
   function method Rep(x: ListC): List 
-    ensures (x.Conc? && AllInitDecomposable(x)) ==> Rep(x).Cons?
+    ensures (x.Conc? && SnocStructure(x)) ==> Rep(x).Cons?
   {
     match x
     case NilC => Nil 
@@ -183,11 +191,13 @@ module Lists {
     (x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig)
   }
 
+  // Separating out the induction proof from the definition of Aux
+  // seems to be helpful 
   lemma AuxProperty(orig: List, x: ListC, y: List) 
     decreases y
     requires x.El? || x.Conc?
     requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
-    requires AllInitDecomposable(x) // Structure of x 
+    requires SnocStructure(x) // Structure of x 
     requires !x.Conc? ==> ListConc(Rep(NilC), Cons(x.val, y)) == orig
     requires x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig 
     ensures forall t: ListC :: (t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig)
@@ -210,30 +220,32 @@ module Lists {
 
   }
 
-  predicate AllInitDecomposable(x: ListC) 
+  // Specifies the structure of x in NewAux
+  predicate SnocStructure(x: ListC) 
   {
-    x.Conc? ==> (InitDecomposableC(x) && AllInitDecomposable(x.left))
+    (x.Conc? || x.El?) && 
+    (x.Conc? ==> (InitDecomposableC(x) && SnocStructure(x.left)))
   }
 
-  // predicate 
+  lemma ConcSingleton(a: int, y: List) 
+    ensures Cons(a, y) == ListConc(Cons(a, Nil), y)
+  {
+
+  }
 
   lemma RepAssociation(x: ListC, y: List)
     decreases x 
-    requires AllInitDecomposable(x)
+    requires SnocStructure(x)
     ensures x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == ListConc(Rep(x), y) 
   {
-    assume false;
-    // match x 
-    // case NilC => {} 
-    // case El(a) => {} 
-    // case Conc(a, b) => {
-    //   assert b.El?;
-    //   var r := Rep(x);
-    //   var z := a;
-    //   RepAssociation(z, y);
-    //   var test := Rep(x.left).head;
-    //   // assume Rep(x.left).head == Rep(x).head;
-    // }
+    match x 
+    case NilC => {} 
+    case El(a) => {}
+    case Conc(a, b) => {
+      assert ListConc(Rep(x.left), Cons(x.right.val, Nil)) == Rep(x);
+      ConcSingleton(x.right.val, y);
+      ListConcAssoc(Rep(x.left), Cons(x.right.val, Nil), y);
+    }
   }
 
   lemma RepInverse(x: ListC, l: List)
@@ -252,26 +264,32 @@ module Lists {
 
   // Sanity check
   method Main() {
-    var l := Cons(5, Cons(-2, Cons(3, Cons(-2, Cons(3, Nil)))));
-    // var l := Cons(5, Cons(2, Nil));
-    // var l := Nil;
-    // var assoc := ComplexCoding(l);
-    var assoc := NewComplex(l);
-    // var c := assoc;
-    // while c != {} 
-    //   decreases c;
+    // var l := Cons(5, Cons(-2, Cons(3, Cons(-2, Cons(3, Nil)))));
+    // // var l := Cons(5, Cons(2, Nil));
+    // // var l := Nil;
+    // // var assoc := ComplexCoding(l);
+    // var assoc := NewComplex(l);
+    // // var c := assoc;
+    // // while c != {} 
+    // //   decreases c;
+    // // {
+    // //   var y :| y in c;
+    // //   print PrintListC(y) + "\n";
+    // //   c := c - { y };
+    // // }
+    // var i := 0;
+    // while i < |assoc|
+    //   invariant i <= |assoc|
     // {
-    //   var y :| y in c;
-    //   print PrintListC(y) + "\n";
-    //   c := c - { y };
+    //   print PrintListC(assoc[i]) + "\n";
+    //   i := i + 1;
     // }
-    var i := 0;
-    while i < |assoc|
-      invariant i <= |assoc|
-    {
-      print PrintListC(assoc[i]) + "\n";
-      i := i + 1;
-    }
+    // var y := Cons(1, Cons(2, Nil)); // (., (., ?))
+    // var x := Conc(Conc(El(3), El(4)), El(5)); // ((., .), .)
+    // var res1 := ListConc(Rep(x.left), Cons(x.right.val, y));
+    // var res2 := ListConc(Rep(x), y);
+    // print PrintList(res1) + "\n";
+    // print PrintList(res2);
   }
 
 }
