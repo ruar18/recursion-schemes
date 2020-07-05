@@ -108,7 +108,7 @@ module Lists {
     decreases y
     requires x.El? || x.Conc?
     requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
-    requires x.Conc? ==> InitDecomposableC(x) // Structure of x 
+    requires AllInitDecomposable(x) // Structure of x 
     requires !x.Conc? ==> ListConc(Rep(NilC), Cons(x.val, y)) == orig
     requires x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig 
     ensures forall t: ListC :: t in NewAux(orig, x, y) ==> t.Conc? // Results are always decomposable
@@ -142,6 +142,7 @@ module Lists {
 
   /**** ListC -> List representation function ****/
   function method Rep(x: ListC): List 
+    ensures (x.Conc? && AllInitDecomposable(x)) ==> Rep(x).Cons?
   {
     match x
     case NilC => Nil 
@@ -186,7 +187,7 @@ module Lists {
     decreases y
     requires x.El? || x.Conc?
     requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
-    requires x.Conc? ==> InitDecomposableC(x) // Structure of x 
+    requires AllInitDecomposable(x) // Structure of x 
     requires !x.Conc? ==> ListConc(Rep(NilC), Cons(x.val, y)) == orig
     requires x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig 
     ensures forall t: ListC :: (t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig)
@@ -209,18 +210,30 @@ module Lists {
 
   }
 
+  predicate AllInitDecomposable(x: ListC) 
+  {
+    x.Conc? ==> (InitDecomposableC(x) && AllInitDecomposable(x.left))
+  }
+
+  // predicate 
+
   lemma RepAssociation(x: ListC, y: List)
-    requires x.Conc? ==> InitDecomposableC(x)
+    decreases x 
+    requires AllInitDecomposable(x)
     ensures x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == ListConc(Rep(x), y) 
   {
-    // assume false;
-    match y 
-    case Nil => {
-      ListConcRightIdentity(Rep(x), y);
-    } 
-    case Cons(hd, tl) => {
-      
-    } 
+    assume false;
+    // match x 
+    // case NilC => {} 
+    // case El(a) => {} 
+    // case Conc(a, b) => {
+    //   assert b.El?;
+    //   var r := Rep(x);
+    //   var z := a;
+    //   RepAssociation(z, y);
+    //   var test := Rep(x.left).head;
+    //   // assume Rep(x.left).head == Rep(x).head;
+    // }
   }
 
   lemma RepInverse(x: ListC, l: List)
