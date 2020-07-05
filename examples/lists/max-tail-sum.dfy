@@ -1,8 +1,6 @@
 /*
 Here we try the maximum tail sum example of recsynt Section A.1.3.
 We use a coding function that changes up the recursive structure of the list. 
-We try to explicitly produce a set of lists with the coding function.
-WARNING: messy and does not verify. 
 */
 
 include "./list-utils.dfy"
@@ -91,14 +89,14 @@ module MaxTailSum {
   }
 
   // Sanity check
-  method Main() {
-    var l := Cons(-4, Cons(5, Cons(5, Cons(3, Nil))));
-    // var x := SimpleCoding(l);
-    var x := Coding(l)[2];
-    print MainF(l);
-    print "\n";
-    print MainG(x);
-  }
+  // method Main() {
+  //   var l := Cons(-4, Cons(5, Cons(5, Cons(3, Nil))));
+  //   // var x := SimpleCoding(l);
+  //   var x := Coding(l)[2];
+  //   print MainF(l);
+  //   print "\n";
+  //   print MainG(x);
+  // }
 }
 
 

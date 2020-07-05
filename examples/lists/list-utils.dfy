@@ -99,7 +99,7 @@ module Lists {
   }
 
 
-  function method Aux(orig: List, x: ListC, y: List): seq<ListC> 
+  function method Aux(orig: List, x: ListC, y: List): set<ListC> 
     decreases y
     requires x.El? || x.Conc?
     requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
@@ -116,15 +116,15 @@ module Lists {
     // Needed for the postcondition that ListConc(Rep(x), y) == orig 
     RepAssociation(x, y);
     match y 
-    case Nil => [Conc(x, NilC)]
-    case Cons(head, tail) => Aux(orig, Conc(x, El(head)), tail) + [Conc(x, SimpleCoding(y))]
+    case Nil => {Conc(x, NilC)}
+    case Cons(head, tail) => Aux(orig, Conc(x, El(head)), tail) + {Conc(x, SimpleCoding(y))}
   }
 
-  function method Coding(l: List): seq<ListC> 
+  function method Coding(l: List): set<ListC> 
     ensures l != Nil ==> forall t: ListC :: (t in Coding(l) ==> t.Conc?)
     ensures l != Nil ==> forall t: ListC :: (t in Coding(l) && !t.left.Conc?) ==> t == SimpleCoding(l)
   {
-    if l == Nil then [NilC] else Aux(l, El(l.head), l.tail)
+    if l == Nil then {NilC} else Aux(l, El(l.head), l.tail)
   }
 
   /**** ListC -> List representation function ****/
