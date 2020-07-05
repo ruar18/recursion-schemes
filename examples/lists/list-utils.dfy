@@ -89,7 +89,6 @@ module Lists {
   predicate HeadDecomposableC(x: ListC) 
     requires x.Conc?
   {
-    // exists a: int, tail: ListC :: x == Conc(El(a), tail)
     x.left.El? 
   }
 
@@ -126,25 +125,18 @@ module Lists {
     ensures Conc(x, SimpleCoding(y)) in NewAux(orig, x, y)  // Info about which lists are included 
     ensures ListConc(Rep(x), y) == orig 
     ensures y == Nil ==> (forall t: ListC :: t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig) 
-    // ensures y != Nil ==> (NewAux(orig, x, y) - NewAux(orig, Conc(x, El(y.head)), y.tail)) == {Conc(x, SimpleCoding(y))} // maybe using a seq will be better? 
-    // ensures y != Nil ==> forall t: ListC :: (t in NewAux(orig, x, y) ==> ListConc(Rep(t.left), Rep(t.right)) == orig)
   {
+    // Needed for the postcondition that ListConc(Rep(x), y) == orig 
     RepAssociation(x, y);
     match y 
     case Nil => [Conc(x, NilC)]
     case Cons(head, tail) => NewAux(orig, Conc(x, El(head)), tail) + [Conc(x, SimpleCoding(y))]
-    // {Conc(Conc(x, El(head)), SimpleCoding(tail))}
-    //{AssociateLeft(x, head, SimpleCoding(y))}
   }
 
   function method NewComplex(l: List): seq<ListC> 
     ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) ==> t.Conc?)
     ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && !t.left.Conc?) ==> t == SimpleCoding(l)
-    // ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) && t.left.Conc?) ==> InitDecomposableC(t.left)
-    // ensures l != Nil ==> forall t: ListC :: (t in NewComplex(l) ==> ListConc(Rep(t.left), Rep(t.right)) == l)
   {
-    // AuxProperty(l, El(l.head), l.tail);
-    // NewAux(NilC, l) // maybe instead El(l.head), l.tail?
     if l == Nil then [NilC] else NewAux(l, El(l.head), l.tail)
   }
 
@@ -176,24 +168,8 @@ module Lists {
   {
   }
 
-  lemma AssocRepEquiv(x: ListC, y: ListC, z: ListC)
-    ensures Rep(Conc(Conc(x, y), z)) == Rep(Conc(x, Conc(y, z)))
-  {
-    ListConcAssoc(Rep(x), Rep(y), Rep(z));
-  }
-
-  predicate AuxPreconditions(orig: List, x: ListC, y: List) 
-  {
-    (x.El? || x.Conc?) &&
-    (!x.Conc? ==> orig == Cons(x.val, y)) && 
-    (x.Conc? ==> InitDecomposableC(x)) && 
-    (!x.Conc? ==> ListConc(Rep(NilC), Cons(x.val, y)) == orig) && 
-    (x.Conc? ==> ListConc(Rep(x.left), Cons(x.right.val, y)) == orig)
-  }
-
   // Separating out the induction proof from the definition of Aux
-  // seems to be helpful 
-  lemma AuxProperty(orig: List, x: ListC, y: List) 
+  lemma AuxConcProperty(orig: List, x: ListC, y: List) 
     decreases y
     requires x.El? || x.Conc?
     requires !x.Conc? ==> orig == Cons(x.val, y) // Special case
@@ -205,19 +181,14 @@ module Lists {
     match y 
     case Nil => {} 
     case Cons(hd, tl) => {
+      // This is needed to ensure the recursive call meets 
+      // the 5th precondition of AuxConcProperty
       RepAssociation(x, y);
-      AuxProperty(orig, Conc(x, El(hd)), tl);
+      AuxConcProperty(orig, Conc(x, El(hd)), tl);
       var t := Conc(x, SimpleCoding(y));
       SimpleRepInverse(y, SimpleCoding(y));
       assert ListConc(Rep(t.left), Rep(t.right)) == orig;
     }
-  }
-
-  lemma ListConcRightIdentity(a: List, b: List)
-    requires b == Nil 
-    ensures ListConc(a, b) == a 
-  {
-
   }
 
   // Specifies the structure of x in NewAux
@@ -258,38 +229,7 @@ module Lists {
     case Conc(a, b) => {
       assert Rep(x) == ListConc(Rep(a), Rep(b));
       // This is really a statement about NewComplex
-      AuxProperty(l, El(l.head), l.tail); 
+      AuxConcProperty(l, El(l.head), l.tail); 
     }
   }
-
-  // Sanity check
-  method Main() {
-    // var l := Cons(5, Cons(-2, Cons(3, Cons(-2, Cons(3, Nil)))));
-    // // var l := Cons(5, Cons(2, Nil));
-    // // var l := Nil;
-    // // var assoc := ComplexCoding(l);
-    // var assoc := NewComplex(l);
-    // // var c := assoc;
-    // // while c != {} 
-    // //   decreases c;
-    // // {
-    // //   var y :| y in c;
-    // //   print PrintListC(y) + "\n";
-    // //   c := c - { y };
-    // // }
-    // var i := 0;
-    // while i < |assoc|
-    //   invariant i <= |assoc|
-    // {
-    //   print PrintListC(assoc[i]) + "\n";
-    //   i := i + 1;
-    // }
-    // var y := Cons(1, Cons(2, Nil)); // (., (., ?))
-    // var x := Conc(Conc(El(3), El(4)), El(5)); // ((., .), .)
-    // var res1 := ListConc(Rep(x.left), Cons(x.right.val, y));
-    // var res2 := ListConc(Rep(x), y);
-    // print PrintList(res1) + "\n";
-    // print PrintList(res2);
-  }
-
 }
