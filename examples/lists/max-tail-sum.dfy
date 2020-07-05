@@ -53,8 +53,7 @@ module MaxTailSum {
   }
 
 
-  /**** Some experiments with the Rep function ****/
-
+  /**** Proving the equivalence ****/
   lemma FHom(x: List, y: List) 
     ensures MainF(ListConc(x, y)) == Join(MainF(x), MainF(y))
   {
@@ -87,16 +86,6 @@ module MaxTailSum {
       FRepBehaviour(x);
     }
   }
-
-  // Sanity check
-  // method Main() {
-  //   var l := Cons(-4, Cons(5, Cons(5, Cons(3, Nil))));
-  //   // var x := SimpleCoding(l);
-  //   var x := Coding(l)[2];
-  //   print MainF(l);
-  //   print "\n";
-  //   print MainG(x);
-  // }
 }
 
 
