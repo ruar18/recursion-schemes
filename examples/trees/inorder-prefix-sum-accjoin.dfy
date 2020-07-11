@@ -88,7 +88,11 @@ lemma AccJoinBehaviour(x: (int, int), t: tree)
 	match t 
 	case nil => {} 
 	case node(a, l, r) => {
-		assert F(x, t) == accJoin(x, accJoin(lblJoin(MainF(l), a), MainF(r)));
+		// Just need to unfold slightly - worked in num-nodes too! 
+		calc == {
+			accJoin(x, MainF(t));
+			accJoin(x, F(lblJoin(F((0,0), l), a), r));
+		}
 	}
 }
 
