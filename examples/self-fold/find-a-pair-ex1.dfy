@@ -16,7 +16,7 @@ module FindAPair1 {
   predicate method p(a: int, b: int)
   {
     a != b && (a != 0 && b != 0) && 
-    ((b != 0 && a % b == 0) || (a != 0 && b % a == 0))
+    ((a % b == 0) || (b % a == 0))
   }
 
   /**** Naive iterative approach ****/
@@ -72,6 +72,7 @@ module FindAPair1 {
   }
 
   function method Main2(l: List): D 
+    ensures Main2(l).0 == l 
   {
     F2(s_0, l)
   }
@@ -79,6 +80,7 @@ module FindAPair1 {
   // The outer fold
   function method F2(s: D, l: List): D 
     decreases l
+    ensures F2(s, l).0 == l 
   {
     match l 
     case Nil => s 
@@ -105,13 +107,14 @@ module FindAPair1 {
   // Attempt 1: using the approach for trees. 
   function method AccJoin(s: D, res: D): D 
   {
-    s_0 // TODO
+    F2(s, res.0)
   }
 
   lemma AccJoinBehaviour(s: D, l: List) 
     ensures F2(s, l) == AccJoin(s, Main2(l))
   {
-    assume F2(s, l) == AccJoin(s, Main2(l));
+    // assume F2(s, l) == AccJoin(s, Main2(l));
+    assert Main2(l).0 == l;
   }
 
   // We generated this automatically

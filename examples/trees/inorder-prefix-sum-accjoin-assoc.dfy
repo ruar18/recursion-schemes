@@ -11,11 +11,15 @@ function method max(x: int, y: int): int
 
 // The in-order recursion scheme
 function method f_0(x: (int, int)): (int, int)  
+	requires x.1 >= x.0 
+	ensures f_0(x).1 >= f_0(x).0 
 {
   x
 }
 
 function method lblJoin(r: (int, int), a: int): (int, int) 
+	requires r.1 >= r.0 
+	ensures lblJoin(r, a).1 >= lblJoin(r, a).0
 {
 	// (sum, MPS)
 	(r.0 + a, max(r.0 + a, r.1))
@@ -24,7 +28,9 @@ function method lblJoin(r: (int, int), a: int): (int, int)
 
 
 function F(x: (int, int), t: tree): (int, int)
+	requires x.1 >= x.0 
 	decreases t
+	ensures F(x, t).1 >= F(x, t).0
 {
 	match t 
 	case nil => f_0(x)
@@ -67,16 +73,17 @@ function method accJoin(x: (int, int), res: (int, int)): (int, int)
 	(x.0 + res.0, max(x.1, x.0 + res.1))
 }
 
-// This version also works, of course 
-// function method accJoin(x: (int, int), res: (int, int)): (int, int) 
-// {
-// 	(x.0 + res.0, max(max(x.1, x.0), x.0 + res.1))
-// }
+lemma AccJoinAssoc(x: (int, int), y: (int, int), z: (int, int))
+	requires x.1 >= x.0 && y.1 >= y.0 && z.1 >= z.0 
+	ensures accJoin(accJoin(x, y), z) == accJoin(x, accJoin(y, z))
+{
 
-// We know how to generate this automatically.
-// It's not surprising that Dafny can prove this automatically - it's really simple!  
-lemma InductiveFact(a: int, l: tree, r: tree)
-	ensures combine(a, MainG(l), MainG(r)) == accJoin(lblJoin(MainG(l), a), MainG(r))
+}
+
+// Very interesting 
+lemma LblJoinAccJoin(x: (int, int), r: (int, int), a: int)
+	requires x.1 >= x.0 && r.1 >= r.0
+	ensures lblJoin(accJoin(x, r), a) == accJoin(x, lblJoin(r, a))
 {
 
 }
@@ -89,11 +96,8 @@ lemma AccJoinBehaviour(x: (int, int), t: tree)
 	match t 
 	case nil => {} 
 	case node(a, l, r) => {
-		// Just need to unfold slightly - worked in num-nodes too! 
-		calc == {
-			accJoin(x, MainF(t));
-			accJoin(x, F(lblJoin(F((0,0), l), a), r));
-		}
+		// Reduce the recursion scheme 
+		AccJoinAssoc(x, lblJoin(MainF(l), a), MainF(r));
 	}
 }
 
@@ -109,7 +113,6 @@ lemma EquivalentSchemes(t: tree)
 		// Follow the structure of the proof given on the Overleaf document
     var s := lblJoin(MainF(l), a);
     AccJoinBehaviour(s, r);
-    InductiveFact(a, l, r);
     EquivalentSchemes(l);
     EquivalentSchemes(r);
 	}

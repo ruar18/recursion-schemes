@@ -90,7 +90,7 @@ lemma EquivalentSchemes(t: tree)
     // Follow the structure of the proof given on the Overleaf document
     var s := lblJoin(MainF(l), a);
     AccJoinBehaviour(s, r);
-    AccJoinCombine(a, MainF(l), MainF(r));
+    // AccJoinCombine(a, MainF(l), MainF(r));
     EquivalentSchemes(l);
     EquivalentSchemes(r);
   }
