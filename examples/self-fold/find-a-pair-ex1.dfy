@@ -72,7 +72,6 @@ module FindAPair1 {
   }
 
   function method Main2(l: List): D 
-    ensures Main2(l).0 == l 
   {
     F2(s_0, l)
   }
@@ -80,7 +79,6 @@ module FindAPair1 {
   // The outer fold
   function method F2(s: D, l: List): D 
     decreases l
-    ensures F2(s, l).0 == l 
   {
     match l 
     case Nil => s 
@@ -113,8 +111,7 @@ module FindAPair1 {
   lemma AccJoinBehaviour(s: D, l: List) 
     ensures F2(s, l) == AccJoin(s, Main2(l))
   {
-    // assume F2(s, l) == AccJoin(s, Main2(l));
-    assert Main2(l).0 == l;
+    assume F2(s, l) == AccJoin(s, Main2(l));
   }
 
   // We generated this automatically
