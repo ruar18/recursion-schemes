@@ -54,12 +54,24 @@ module MaxTailSum {
 
 
   /**** Proving the equivalence ****/
+  lemma InterestingLemma(hd: int, res1: (int, int), res2: (int, int))
+    requires res1.1 >= res1.0 && res2.1 >= res2.0
+    ensures FoldOp(hd, Join(res1, res2)) == Join(FoldOp(hd, res1), res2)
+  {
+
+  }
+
+  lemma SecondLemma(a: ListC, a': ListC, b: ListC, b': ListC)
+    requires Rep(a) == Rep(a') && Rep(b) == Rep(b')
+    ensures Rep(Conc(a, b)) == Rep(Conc(a', b'))
+  {
+
+  }
+
   lemma FHom(x: List, y: List) 
     ensures MainF(ListConc(x, y)) == Join(MainF(x), MainF(y))
   {
-    match y 
-    case Nil => {} 
-    case Cons(head, tail) => {} // A good enough hint. 
+
   }
 
 
@@ -86,6 +98,8 @@ module MaxTailSum {
       FRepBehaviour(x);
     }
   }
+
+  // Trying the original direction directly doesn't work well 
 }
 
 
