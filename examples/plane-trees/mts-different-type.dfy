@@ -68,7 +68,7 @@ function method Link(a: Maybe<int>, t1: TreeP, t2: TreeP): TreeP
   R(NodeLB(a, C(t1), C(t2)))
 }
 
-/**** Declaring f = PTH(0, +, +) ****/
+/**** Declaring f = PreOrderP(0, +, +) ****/
 function method f(t: TreeP): int 
 {
   F1(0, t)
@@ -104,4 +104,27 @@ function method G1(s: int, l: List<TreeP>): int
 function method OTimes(s: int, a: int): int 
 {
   s + a
+}
+
+
+/**** Declaring  g = InOrder(0, x -> x, +) ****/
+function method g(t: TreeLB): int 
+{
+  F2(Just(0), t)
+}
+
+function method F2(x: Maybe<int>, t: TreeLB): int 
+  decreases t
+{
+  match t 
+  {
+    // I don't think I actually need the Maybe...
+    case NilLB => if x.Nothing? then 0 else x.val 
+    case NodeLB(a, l, r) => F2(AccJoin(F2(x, l), a), r)
+  }
+}
+
+function method AccJoin(r: int, a: Maybe<int>): Maybe<int> 
+{
+  Just(r + (if a.Nothing? then 0 else a.val))
 }
