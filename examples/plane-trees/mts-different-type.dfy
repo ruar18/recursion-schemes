@@ -5,6 +5,7 @@ the sum of all the node labels (we're sticking with a simple example for now).
 We use the coding function presented in recsynt B.1.6: TreeP --> TreeLB
 */
 
+/**** Declaring Types ****/
 datatype List <T> = Nil | Cons(hd: T, tl: List)
 datatype ListC <T> = NilC | El(val: T) | Conc(left: ListC, right: ListC)
 
@@ -15,6 +16,7 @@ datatype TreeP = NilP | NodeP(a: int, l: List<TreeP>)
 datatype Maybe <T> = Nothing | Just(val: T)
 
 
+/**** Declaring preliminaries ****/
 // Coding function
 function method C(t: TreeP): TreeLB
 {
@@ -64,4 +66,42 @@ predicate R_Monotonicity(a: Maybe<int>, t1: TreeLB, t2: TreeLB, t1': TreeLB, t2'
 function method Link(a: Maybe<int>, t1: TreeP, t2: TreeP): TreeP 
 {
   R(NodeLB(a, C(t1), C(t2)))
+}
+
+/**** Declaring f = PTH(0, +, +) ****/
+function method f(t: TreeP): int 
+{
+  F1(0, t)
+}
+
+function method F1(s: int, t: TreeP): int 
+  decreases t 
+{
+  match t 
+  {
+    case NilP => s 
+    case NodeP(a, l) => G1(OPlus(s, a), l)
+  }
+}
+
+function method OPlus(s: int, a: int): int 
+{
+  s + a
+}
+
+function method G1(s: int, l: List<TreeP>): int 
+  decreases l
+{
+  match l 
+  {
+    case Nil => s 
+    case Cons(hd, tl) => G1(OTimes(s, F1(0, hd)), tl) // update accumulator
+    // Had some trouble here with the "decreases", 
+    // when I used f(hd) instead of F1(0, hd). Why? 
+  }
+}
+
+function method OTimes(s: int, a: int): int 
+{
+  s + a
 }
