@@ -5,22 +5,22 @@ the sum of all the node labels (we're sticking with a simple example for now).
 We use the coding function presented in recsynt B.1.6: TreeP --> TreeLB
 */
 
-
 datatype List <T> = Nil | Cons(hd: T, tl: List)
 datatype ListC <T> = NilC | El(val: T) | Conc(left: ListC, right: ListC)
 
-datatype TreeLB = NilLB | NodeLB(a: int, left: TreeLB, right: TreeLB) 
+datatype TreeLB = NilLB | NodeLB(a: Maybe<int>, left: TreeLB, right: TreeLB) 
+// TreeP will only have integer labels, don't know a cleaner way
 datatype TreeP = NilP | NodeP(a: int, l: List<TreeP>)
 
-// For simplicity, avoid testing TreePs with eps as one of the nodes
-const eps: int := 0;
+datatype Maybe <T> = Nothing | Just(val: T)
+
 
 // Coding function
 function method C(t: TreeP): TreeLB
 {
   match t 
   case NilP => NilLB 
-  case NodeP(a, l) => NodeLB(a, NilLB, Process(l))
+  case NodeP(a, l) => NodeLB(Just(a), NilLB, Process(l))
 }
 
 // Processes a list of TreePs by spacing them out with eps-nodes
@@ -28,7 +28,7 @@ function method Process(l: List<TreeP>): TreeLB
 {
   match l 
   case Nil => NilLB 
-  case Cons(hd, tl) => NodeLB(eps, C(hd), Process(tl))
+  case Cons(hd, tl) => NodeLB(Nothing, C(hd), Process(tl))
 }
 
 // Representation function. 
@@ -54,14 +54,14 @@ predicate R_LeftInverse()
 }
 
 // Assume this when needed 
-predicate R_Monotonicity(a: int, t1: TreeLB, t2: TreeLB, t1': TreeLB, t2': TreeLB)
+predicate R_Monotonicity(a: Maybe<int>, t1: TreeLB, t2: TreeLB, t1': TreeLB, t2': TreeLB)
   requires R(t1) == R(t1) && R(t2) == R(t2')
 {
   R(NodeLB(a, t1, t2)) == R(NodeLB(a, t1', t2'))
 }
 
 // This is \mathcal{K}
-function method Link(a: int, t1: TreeP, t2: TreeP): TreeP 
+function method Link(a: Maybe<int>, t1: TreeP, t2: TreeP): TreeP 
 {
   R(NodeLB(a, C(t1), C(t2)))
 }
