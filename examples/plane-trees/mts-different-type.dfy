@@ -1,8 +1,8 @@
 /*
 Here we test proving equivalence of functions defined on plane trees
-and  on labelled binary trees. In both cases, the function just computes
-the sum of all the node labels (we're sticking with a simple example for now). 
-We use the coding function presented in recsynt B.1.6: TreeP --> TreeLB
+and  on labelled binary trees. In both cases, the function computes
+the maximum preorder prefix sum. 
+We use the coding function presented in recsynt B.1.6: TreeP --> TreeLB.
 */
 
 /**** Declaring Types ****/
@@ -13,10 +13,17 @@ datatype TreeLB = NilLB | NodeLB(a: Maybe<int>, left: TreeLB, right: TreeLB)
 // TreeP will only have integer labels, don't know a cleaner way
 datatype TreeP = NilP | NodeP(a: int, l: List<TreeP>)
 
+// eps := Nothing
 datatype Maybe <T> = Nothing | Just(val: T)
 
 
 /**** Declaring preliminaries ****/
+function method Max(x: int, y: int): int 
+{
+  if x > y then x else y 
+}
+
+
 // Coding function
 function method C(t: TreeP): TreeLB
 {
@@ -68,63 +75,41 @@ function method Link(a: Maybe<int>, t1: TreeP, t2: TreeP): TreeP
   R(NodeLB(a, C(t1), C(t2)))
 }
 
-/**** Declaring f = PreOrderP(0, +, +) ****/
-function method f(t: TreeP): int 
+/**** Declaring f (PreOrder) ****/
+function method f(t: TreeP): (int, int)
 {
-  F1(0, t)
+  F1((0,0), t)
 }
 
-function method F1(s: int, t: TreeP): int 
+function method F1(s: (int, int), t: TreeP): (int, int)
   decreases t 
 {
   match t 
   {
     case NilP => s 
-    case NodeP(a, l) => G1(OPlus(s, a), l)
+    case NodeP(a, l) => F2(OPlusF(s, a), l)
   }
 }
 
-function method OPlus(s: int, a: int): int 
+function method OPlusF(s: (int, int), a: int): (int, int) 
 {
-  s + a
+  (s.0 + a, Max(s.1, s.0 + a))
 }
 
-function method G1(s: int, l: List<TreeP>): int 
+function method F2(s: (int, int), l: List<TreeP>): (int, int)
   decreases l
 {
   match l 
   {
     case Nil => s 
-    case Cons(hd, tl) => G1(OTimes(s, F1(0, hd)), tl) // update accumulator
+    case Cons(hd, tl) => F2(OTimesF(s, F1((0, 0), hd)), tl) // update accumulator
     // Had some trouble here with the "decreases", 
     // when I used f(hd) instead of F1(0, hd). Why? 
   }
 }
 
-function method OTimes(s: int, a: int): int 
+function method OTimesF(s: (int, int), r: (int, int)): (int, int) 
 {
-  s + a
+  (s.0 + r.0, Max(s.1, s.0 + r.1))
 }
 
-
-/**** Declaring  g = InOrder(0, x -> x, +) ****/
-function method g(t: TreeLB): int 
-{
-  F2(Just(0), t)
-}
-
-function method F2(x: Maybe<int>, t: TreeLB): int 
-  decreases t
-{
-  match t 
-  {
-    // I don't think I actually need the Maybe...
-    case NilLB => if x.Nothing? then 0 else x.val 
-    case NodeLB(a, l, r) => F2(AccJoin(F2(x, l), a), r)
-  }
-}
-
-function method AccJoin(r: int, a: Maybe<int>): Maybe<int> 
-{
-  Just(r + (if a.Nothing? then 0 else a.val))
-}
