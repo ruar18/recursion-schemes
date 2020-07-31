@@ -113,3 +113,18 @@ function method OTimesF(s: (int, int), r: (int, int)): (int, int)
   (s.0 + r.0, Max(s.1, s.0 + r.1))
 }
 
+
+/**** Declaring g (PreOrder) ****/
+function method g(t: TreeLB): (int, int) 
+{
+  G((0, 0), t)
+}
+
+function method G(s: (int, int), t: TreeLB): (int, int)
+{
+  match t 
+  {
+    case NilLB => s 
+    case NodeLB(a, l, r) => G(G(OPlusG(s, a), l), r)
+  }
+}
