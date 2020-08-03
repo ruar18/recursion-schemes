@@ -41,9 +41,10 @@ function method Process(l: List<TreeP>): TreeLB
 }
 
 // Representation function. 
-// TODO: we want this to work naturally for all t, not just ones 
-// produced by the coding function. How? 
-function method R(t: TreeLB): TreeP 
+// We check if t could be in the image of c;
+// if not, we just preserve the structure of the tree. 
+// But for now it's opaque. 
+function method {:opaque} R(t: TreeLB): TreeP 
 {
   // match t 
   // case NilLB => NilP 
@@ -70,10 +71,16 @@ predicate R_Monotonicity(a: Maybe<int>, t1: TreeLB, t2: TreeLB, t1': TreeLB, t2'
 }
 
 // This is \mathcal{K}
-function method Link(a: Maybe<int>, t1: TreeP, t2: TreeP): TreeP 
+function method Link(a: int, t1: TreeP, t2: TreeP): TreeP 
 {
-  R(NodeLB(a, C(t1), C(t2)))
+  R(NodeLB(Just(a), C(t1), C(t2)))
 }
+
+predicate LinkFact(a: int, t1: TreeP, t2: TreeP)
+{
+  Link(a, t1, t2) == NodeP(a, Cons(t1, Cons(t2, Nil)))
+}
+
 
 /**** Declaring f (PreOrder) ****/
 function method f(t: TreeP): (int, int)
@@ -121,10 +128,25 @@ function method g(t: TreeLB): (int, int)
 }
 
 function method G(s: (int, int), t: TreeLB): (int, int)
+  decreases t 
 {
   match t 
   {
     case NilLB => s 
     case NodeLB(a, l, r) => G(G(OPlusG(s, a), l), r)
   }
+}
+
+function method OPlusG(s: (int, int), a: Maybe<int>): (int, int) 
+{
+  var a_val := if a.Just? then a.val else 0;
+  (s.0 + a_val, Max(s.1, s.0 + a_val))
+}
+
+/**** THE LEMMAS ****/
+
+// Assume when needed
+predicate BaseCase()
+{
+  
 }
