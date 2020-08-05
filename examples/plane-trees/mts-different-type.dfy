@@ -23,6 +23,9 @@ function method Max(x: int, y: int): int
   if x > y then x else y 
 }
 
+// Special tree value used for modifying C, 
+// making it possible to define an R having the desirable properties. 
+const EpsTree: TreeLB := NodeLB(Nothing, NilLB, NilLB);
 
 // Coding function
 function method C(t: TreeP): TreeLB
@@ -31,7 +34,7 @@ function method C(t: TreeP): TreeLB
   {
     case NilP => NilLB 
     // NOTE THIS MODIFICATION
-    case NodeP(a, l) => NodeLB(Just(a), Nothing, Process(l)) 
+    case NodeP(a, l) => NodeLB(Just(a), EpsTree, Process(l)) 
   }
 }
 
@@ -46,20 +49,32 @@ function method Process(l: List<TreeP>): TreeLB
 
 /*
 Representation function. 
-We check if t could be in the image of c;
-if not, we just preserve the structure of the tree. 
-Note that if t is in the image of c, then t.root is int, and 
-either t = NilLB, or t.left = NilLB and t.right is either
-NilLB or an eps-rooted tree. 
+We check if t could be in the image of c (1);
+if not, we just preserve the structure of the tree (2). 
+Note that if t is in the image of c, then either t = NilLB, 
+or t.a is an int and t.left = EpsTree. 
 */
-function method {:opaque} R(t: TreeLB): TreeP 
+function method R(t: TreeLB): TreeP 
 {
-  var eps: Maybe<int> := Nothing;
   match t 
   {
-    case NilLB => NilP 
+    case NilLB => NilP // (1)
     case NodeLB(a, left, right) => 
-      if a == Nothing then 
+      if (a == Nothing || left != EpsTree) then NodeP(MaybeToInt(a), Cons(R(left), Cons(R(right), Nil))) // (2) 
+      else ( // (1), here's the actual algorithm 
+        NodeP(a.val, RConvert(right))
+      )
+  }
+}
+
+// Really, this only makes sense if t is an epsilon-rooted tree
+// of the type used in defining C, but maybe it doesn't matter 
+function method RConvert(t: TreeLB): List<TreeP> 
+{
+  match t 
+  {
+    case NilLB => Nil // rightmost leaf in the subtree 
+    case NodeLB(a, left, right) => Cons(R(left), RConvert(right))
   }
 }
 
@@ -210,7 +225,6 @@ lemma OTimesGBehaviour(s: (int, int), t: TreeLB)
 lemma BaseCase()
   ensures f(R(NilLB)) == g(NilLB)
 {
-  assume f(R(NilLB)) == g(NilLB);
 }
 
 
