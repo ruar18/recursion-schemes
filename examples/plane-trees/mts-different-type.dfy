@@ -28,8 +28,11 @@ function method Max(x: int, y: int): int
 function method C(t: TreeP): TreeLB
 {
   match t 
-  case NilP => NilLB 
-  case NodeP(a, l) => NodeLB(Just(a), NilLB, Process(l))
+  {
+    case NilP => NilLB 
+    // NOTE THIS MODIFICATION
+    case NodeP(a, l) => NodeLB(Just(a), Nothing, Process(l)) 
+  }
 }
 
 // Processes a list of TreePs by spacing them out with eps-nodes
@@ -40,21 +43,24 @@ function method Process(l: List<TreeP>): TreeLB
   case Cons(hd, tl) => NodeLB(Nothing, C(hd), Process(tl))
 }
 
-// Representation function. 
-// We check if t could be in the image of c;
-// if not, we just preserve the structure of the tree. 
-// But for now it's opaque. 
+
+/*
+Representation function. 
+We check if t could be in the image of c;
+if not, we just preserve the structure of the tree. 
+Note that if t is in the image of c, then t.root is int, and 
+either t = NilLB, or t.left = NilLB and t.right is either
+NilLB or an eps-rooted tree. 
+*/
 function method {:opaque} R(t: TreeLB): TreeP 
 {
-  // match t 
-  // case NilLB => NilP 
-  // case NodeLB(a, left, right) => 
-  //   if a == eps then // processing an eps-rooted tree
-  //     (if right == NilLB then NodeP(eps, Cons(left.a, Nil))   // last in a list
-  //       else NodeP(eps, Cons(left.a, R(right).l))) // right: an eps-rooted tree 
-  //   else if right == NilLB then NodeP(a, Nil) // leaf 
-  //   else NodeP(a, R(right).l)
-  NilP 
+  var eps: Maybe<int> := Nothing;
+  match t 
+  {
+    case NilLB => NilP 
+    case NodeLB(a, left, right) => 
+      if a == Nothing then 
+  }
 }
 
 lemma R_LeftInverse(t: TreeP)
