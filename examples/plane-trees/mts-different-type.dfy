@@ -42,14 +42,27 @@ function method C(t: TreeP): TreeLB
 function method Process(l: List<TreeP>): TreeLB 
 {
   match l 
-  case Nil => NilLB 
-  case Cons(hd, tl) => NodeLB(Nothing, C(hd), Process(tl))
+  {
+    case Nil => NilLB 
+    case Cons(hd, tl) => NodeLB(Nothing, C(hd), Process(tl))
+  }
 }
 
+// This is true iff t is a tree in the image of Process
+predicate method IsProcessedTree(t: TreeLB)
+{
+  t == NilLB || (t.a == Nothing && IsProcessedTree(t.right) && IsInImageC(t.left))
+}
+
+// This is true iff t is a tree in the image of C 
+predicate method IsInImageC(t: TreeLB)
+{
+  t == NilLB || (t.a != Nothing && t.left == EpsTree && IsProcessedTree(t.right))
+}
 
 /*
 Representation function. 
-We check if t could be in the image of c (1);
+We check if t is in the image of c (1);
 if not, we just preserve the structure of the tree (2). 
 Note that if t is in the image of c, then either t = NilLB, 
 or t.a is an int and t.left = EpsTree. 
@@ -60,10 +73,8 @@ function method R(t: TreeLB): TreeP
   {
     case NilLB => NilP // (1)
     case NodeLB(a, left, right) => 
-      if (a == Nothing || left != EpsTree) then NodeP(MaybeToInt(a), Cons(R(left), Cons(R(right), Nil))) // (2) 
-      else ( // (1), here's the actual algorithm 
-        NodeP(a.val, RConvert(right))
-      )
+      if IsInImageC(t) then NodeP(a.val, RConvert(right)) // (1)
+      else NodeP(MaybeToInt(a), Cons(R(left), Cons(R(right), Nil))) // (2)
   }
 }
 
@@ -78,6 +89,15 @@ function method RConvert(t: TreeLB): List<TreeP>
   }
 }
 
+lemma EpsRootedTreeEquivalence(t: TreeLB, t': TreeLB)
+  requires t.NodeLB? && t'.NodeLB?
+  requires t.a == t'.a == Nothing 
+  requires R(t) == R(t')
+  ensures R(t.left) == R(t'.left)
+{
+
+}
+
 lemma R_LeftInverse(t: TreeP)
   ensures R(C(t)) == t
 {
@@ -85,11 +105,44 @@ lemma R_LeftInverse(t: TreeP)
 }
  
 
-lemma R_Monotonicity(a: Maybe<int>, t1: TreeLB, t2: TreeLB, t1': TreeLB, t2': TreeLB)
-  requires R(t1) == R(t1) && R(t2) == R(t2')
-  ensures R(NodeLB(a, t1, t2)) == R(NodeLB(a, t1', t2'))
+lemma RConvert_Monotonicity(y: TreeLB, y': TreeLB)
+  requires R(y) == R(y')
+  requires IsProcessedTree(y) && IsProcessedTree(y')
+  ensures RConvert(y) == RConvert(y')
 {
-  assume R(NodeLB(a, t1, t2)) == R(NodeLB(a, t1', t2'));
+  match y 
+  {
+    case NilLB => {}
+    case NodeLB(a, left, right) => {
+      assert y'.NodeLB?;
+      EpsRootedTreeEquivalence(y, y');
+      assert R(left) == R(y'.left);
+      RConvert_Monotonicity(right, y'.right);
+    }
+  }
+}
+
+lemma R_Monotonicity(a: Maybe<int>, x: TreeLB, y: TreeLB, x': TreeLB, y': TreeLB)
+  decreases IsInImageC(NodeLB(a, x, y)), IsInImageC(NodeLB(a, x', y')) // cool 
+  requires R(x) == R(x') && R(y) == R(y')
+  ensures R(NodeLB(a, x, y)) == R(NodeLB(a, x', y'))
+{
+  var t, t' := NodeLB(a, x, y), NodeLB(a, x', y');
+  // a few cases 
+  if (!IsInImageC(t) && !IsInImageC(t')) {
+    // assert R(t) == NodeP(MaybeToInt(a), Cons(R(x), Cons(R(y), Nil)));
+    // assert R(t') == NodeP(MaybeToInt(a), Cons(R(x'), Cons(R(y'), Nil)));
+  }
+  else if (IsInImageC(t) && IsInImageC(t')) {
+    RConvert_Monotonicity(y, y');
+  }
+  else if (!IsInImageC(t) && IsInImageC(t')) {
+    assume R(NodeLB(a, x, y)) == R(NodeLB(a, x', y'));
+  }
+  else {
+    // assert !IsInImageC(t') && IsInImageC(t);
+    R_Monotonicity(a, x', y', x, y); 
+  }
 }
 
 // This is \mathcal{K}
@@ -260,6 +313,7 @@ lemma EquivalentSchemesHelper(t': TreeLB)
     case NilLB => {
       BaseCase();
     }
+    // despite the mess below, this should be automatable 
     case NodeLB(a, l, r) => {
       calc == {
         f(R(NodeLB(a, l, r)));
