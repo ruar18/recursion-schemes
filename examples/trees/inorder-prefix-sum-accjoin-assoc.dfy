@@ -74,7 +74,7 @@ function method accJoin(x: (int, int), res: (int, int)): (int, int)
 }
 
 lemma AccJoinAssoc(x: (int, int), y: (int, int), z: (int, int))
-	requires x.1 >= x.0 && y.1 >= y.0 && z.1 >= z.0 
+	// requires x.1 >= x.0 && y.1 >= y.0 && z.1 >= z.0 
 	ensures accJoin(accJoin(x, y), z) == accJoin(x, accJoin(y, z))
 {
 

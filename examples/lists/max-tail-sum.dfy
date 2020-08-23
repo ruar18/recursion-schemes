@@ -55,7 +55,7 @@ module MaxTailSum {
 
   /**** Proving the equivalence ****/
   lemma InterestingLemma(hd: int, res1: (int, int), res2: (int, int))
-    requires res1.1 >= res1.0 && res2.1 >= res2.0
+    // requires res1.1 >= res1.0 && res2.1 >= res2.0
     ensures FoldOp(hd, Join(res1, res2)) == Join(FoldOp(hd, res1), res2)
   {
 

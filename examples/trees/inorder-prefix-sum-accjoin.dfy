@@ -97,6 +97,37 @@ lemma AccJoinBehaviour(x: (int, int), t: tree)
 	}
 }
 
+// Version of AccJoinBehaviour with weaker preconditions
+// In particular, there's no need to identify predicates
+lemma AccJoinBehaviour2(res: (int, int), lbl: int, t: tree)
+	ensures F(lblJoin(res, lbl), t) == accJoin(lblJoin(res, lbl), MainF(t))
+	decreases t 
+{
+	match t 
+	{
+		case nil => {} 
+		case node(a, l, r) => {  
+			var x := lblJoin(res, lbl);
+			// Just need to unfold slightly - worked in num-nodes too! 
+			calc == {
+				accJoin(x, MainF(t));
+				// accJoin(x, F(lblJoin(F((0,0), l), a), r));
+				accJoin(x, F(lblJoin(MainF(l), a), r));
+					{AccJoinBehaviour2(MainF(l), a, r);}
+				accJoin(x, accJoin(lblJoin(MainF(l), a), MainF(r)));
+				// accJoin(accJoin(x, lblJoin(MainF(l), a)), MainF(r)); // assoc 
+				// accJoin(lblJoin(accJoin(x, MainF(l)), a), MainF(r)); // ad hoc property
+				// 	{AccJoinBehaviour2(res, a, l);}
+				accJoin(lblJoin(F(x, l), a), MainF(r));
+					{AccJoinBehaviour2(F(x, l), a, r);}
+				F(lblJoin(F(x, l), a), r);
+				// F(x, t);
+			}
+		}
+	}
+}
+
+
 
 
 // The desired equivalence
@@ -108,8 +139,9 @@ lemma EquivalentSchemes(t: tree)
 	case node(a, l, r) => {
 		// Follow the structure of the proof given on the Overleaf document
     var s := lblJoin(MainF(l), a);
-    AccJoinBehaviour(s, r);
-    InductiveFact(a, l, r);
+		AccJoinBehaviour2(MainF(l), a, r);
+    // AccJoinBehaviour(s, r);
+    // InductiveFact(a, l, r);
     EquivalentSchemes(l);
     EquivalentSchemes(r);
 	}
